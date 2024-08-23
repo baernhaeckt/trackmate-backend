@@ -14,6 +14,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Misc", "Misc", "{22FB3C88-7
 		README.md = README.md
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{E1543089-F359-4B93-85A9-B41DC62C7880}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrackMate.Backend.Tests", "tests\TrackMate.Backend.Tests\TrackMate.Backend.Tests.csproj", "{A0964A01-AF45-4ED5-BB1C-96968247E679}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,9 +36,16 @@ Global
 		{BDA3CB36-133B-4B64-B549-1899A82840DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BDA3CB36-133B-4B64-B549-1899A82840DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BDA3CB36-133B-4B64-B549-1899A82840DC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A0964A01-AF45-4ED5-BB1C-96968247E679}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0964A01-AF45-4ED5-BB1C-96968247E679}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0964A01-AF45-4ED5-BB1C-96968247E679}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A0964A01-AF45-4ED5-BB1C-96968247E679}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A0964A01-AF45-4ED5-BB1C-96968247E679} = {E1543089-F359-4B93-85A9-B41DC62C7880}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8C268BB9-EFCB-4B0C-B782-3A77BD25F3B8}

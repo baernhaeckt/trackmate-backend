@@ -3,17 +3,21 @@ using System.Net.Http.Json;
 
 namespace Trackmate.Backend.Embeddings;
 
-public class PictureEmbeddingClient(IOptions<PictureEmbeddingClientSettings> settings, Func<HttpClientHandler, HttpClient> httpClientBuilder)
+public class PictureEmbeddingClient(
+    IOptions<PictureEmbeddingClientSettings> settings, 
+    Func<HttpClientHandler, HttpClient>? httpClientBuilder = null)
+    : IDisposable
 {
     private HttpClient? _httpClient;
 
     public HttpClient HttpClient
-        => _httpClient ??= httpClientBuilder(new HttpClientHandler());
+        => _httpClient ??= CreateHttpClient();
 
     private HttpClient CreateHttpClient()
     {
+        httpClientBuilder ??= handler => new HttpClient(handler);
         HttpClient newClient = httpClientBuilder(new HttpClientHandler());
-        HttpClient.BaseAddress = settings.Value.BaseUri;
+        newClient.BaseAddress = settings.Value.BaseUri;
 
         return newClient;
     }
@@ -31,5 +35,10 @@ public class PictureEmbeddingClient(IOptions<PictureEmbeddingClientSettings> set
             });
 
         return await response.Content.ReadFromJsonAsync<PictureEmbeddingModel>()!;
+    }
+
+    public void Dispose()
+    {
+        _httpClient?.Dispose();
     }
 }

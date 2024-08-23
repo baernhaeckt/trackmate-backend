@@ -1,3 +1,3 @@
 ﻿namespace Trackmate.Backend.Embeddings;
 
-public record class PictureEmbeddingModel(long[] Embedding);
+public record class PictureEmbeddingModel(float[] Embedding);
