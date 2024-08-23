@@ -20,11 +20,13 @@ public class PictureEmbeddingClient(IOptions<PictureEmbeddingClientSettings> set
 
     public async Task<PictureEmbeddingModel> GeneratePictureEmbedding(string mimeType, Stream pictureDataStream)
     {
+        const string uri = "api/v1/embedding/create";
+
         HttpResponseMessage response = await HttpClient.PostAsync(
-            "docs",
+            new Uri(uri, UriKind.Relative),
             new MultipartFormDataContent
             {
-                { new StreamContent(pictureDataStream), "picture", "picture" },
+                { new StreamContent(pictureDataStream), "file", "file" },
                 { new StringContent(mimeType), "mimeType" }
             });
 

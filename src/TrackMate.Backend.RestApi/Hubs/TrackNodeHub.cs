@@ -7,11 +7,11 @@ namespace TrackMate.Backend.RestApi.Hubs;
 
 public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNodeService) : Hub
 {
-    private readonly Dictionary<Guid, Stream> _trackNodeUploadDictionary = new();
+    private static readonly ConcurrentDictionary<string, List<ISingleClientProxy>> _trackSubscribers = new();
 
-    private readonly ConcurrentDictionary<string, List<ISingleClientProxy>> _trackSubscribers = new();
+    private static readonly Dictionary<Guid, Stream> _trackNodeUploadDictionary = new();
 
-    private readonly Dictionary<string, Stream> _trackPictureUploadDictionary = new();
+    private static readonly Dictionary<string, Stream> _trackPictureUploadDictionary = new();
 
     public async Task CreateTrackNode(CreateTrackNodeModel model)
     {
@@ -23,13 +23,12 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
 
     public async Task UploadPictureChunkForTrackNode(Guid trackNodeId, string mimeType, byte[] chunk, bool isLastChunk)
     {
-        logger.LogInformation("Uploaded chunk({byteSize}) for TrackNode {TrackNodeId}.", chunk.Length, trackNodeId);
-        var filePath = Path.Combine("UploadedFiles", trackNodeId.ToString("N"));
+        logger.LogInformation("Uploaded chunk({byteSize}) for new track node {trackNodeId}.", chunk.Length, trackNodeId);
         await _trackNodeUploadDictionary[trackNodeId].WriteAsync(chunk);
 
         if (isLastChunk)
         {
-            logger.LogInformation("Uploaded last chunk for TrackNode {TrackNodeId}, MimeType: {mimeType}.", trackNodeId, mimeType);
+            logger.LogInformation("Uploaded last chunk for track node {trackNodeId}, MimeType: {mimeType}.", trackNodeId, mimeType);
             await Clients.Caller.SendAsync("Uploaded ", trackNodeId);
 
             Stream stream = _trackNodeUploadDictionary[trackNodeId];
@@ -70,13 +69,13 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
 
     public async Task UploadTrackPositionPicture(string trackId, string mimeType, byte[] chunk, bool isLastChunk)
     {
-        logger.LogInformation("Uploaded chunk({byteSize}) for track {trackId}.", chunk.Length, trackId);
+        logger.LogInformation("Uploaded chunk({byteSize}) for track position {trackId}.", chunk.Length, trackId);
 
         await _trackPictureUploadDictionary[trackId].WriteAsync(chunk);
 
         if (isLastChunk)
         {
-            logger.LogInformation("Uploaded last chunk for TrackNode {trackId}, MimeType: {mimeType}.", trackId, mimeType);
+            logger.LogInformation("Uploaded last chunk for track {trackId} to find position, MimeType: {mimeType}.", trackId, mimeType);
             await Clients.Caller.SendAsync("TrackPositionPictureUploaded", trackId);
 
             Stream stream = _trackPictureUploadDictionary[trackId];
