@@ -20,7 +20,7 @@ public class PictureEmbeddingClientFixture
         using PictureEmbeddingClient client = new PictureEmbeddingClient(settings);
 
         // Act
-        PictureEmbeddingModel result = await client.GeneratePictureEmbedding("image/jpeg", fileStream);
+        PictureEmbeddingModel result = await client.GeneratePictureEmbeddingAsync("image/jpeg", fileStream);
 
         // Assert
         result.Should().NotBeNull();

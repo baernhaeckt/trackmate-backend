@@ -22,7 +22,7 @@ public class PictureEmbeddingClient(
         return newClient;
     }
 
-    public async Task<PictureEmbeddingModel> GeneratePictureEmbedding(string mimeType, Stream pictureDataStream)
+    public async Task<PictureEmbeddingModel> GeneratePictureEmbeddingAsync(string mimeType, Stream pictureDataStream)
     {
         const string uri = "api/v1/embedding/create";
 
@@ -34,7 +34,10 @@ public class PictureEmbeddingClient(
                 { new StringContent(mimeType), "mimeType" }
             });
 
-        return await response.Content.ReadFromJsonAsync<PictureEmbeddingModel>()!;
+        response.EnsureSuccessStatusCode();
+        PictureEmbeddingModel? result = await response.Content.ReadFromJsonAsync<PictureEmbeddingModel>();
+
+        return result ?? throw new InvalidOperationException("Failed to generate picture embedding.");
     }
 
     public void Dispose()
