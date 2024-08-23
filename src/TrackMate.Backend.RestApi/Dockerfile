@@ -11,7 +11,7 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["TrackMate.Backend.RestApi/TrackMate.Backend.RestApi.csproj", "TrackMate.Backend.RestApi/"]
+COPY ["src/TrackMate.Backend.RestApi/TrackMate.Backend.RestApi.csproj", "TrackMate.Backend.RestApi/"]
 RUN dotnet restore "./TrackMate.Backend.RestApi/TrackMate.Backend.RestApi.csproj"
 COPY . .
 WORKDIR "/src/TrackMate.Backend.RestApi"
