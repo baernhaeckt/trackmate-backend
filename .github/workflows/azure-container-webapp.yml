@@ -63,7 +63,7 @@ jobs:
         with:
           push: true
           tags: ghcr.io/${{ env.REPO }}:${{ github.sha }}
-          file: ./src/TrackMate.Backend.RestApi/Dockerfile
+          file: src/TrackMate.Backend.RestApi/Dockerfile
 
   deploy:
     permissions:
