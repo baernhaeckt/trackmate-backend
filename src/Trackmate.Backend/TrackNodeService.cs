@@ -19,7 +19,9 @@ public class TrackNodeService(
     public async Task<TrackNodeModel> UploadTrackNodePictureAsync(UploadPictureModel uploadPictureModel, CancellationToken cancellationToken)
     {
         logger.LogInformation("Enriching track node (id:{trackNodeId} with picture embedding.", uploadPictureModel.TrackNodeId);
-        PictureEmbeddingModel embedding = await embeddingClient.GeneratePictureEmbeddingAsync(uploadPictureModel.MimeType, uploadPictureModel.imageData);
+
+        using Stream dataStream = new MemoryStream(Convert.FromBase64String(uploadPictureModel.ImageDataBase64));
+        PictureEmbeddingModel embedding = await embeddingClient.GeneratePictureEmbeddingAsync(uploadPictureModel.MimeType, dataStream);
         return await trackNodeDataSource.AppendEmbeddingAsync(uploadPictureModel.TrackNodeId, embedding, cancellationToken);
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using Trackmate.Backend;
 using Trackmate.Backend.Models;
+using Trackmate.Backend.TrackNodes;
 
 namespace TrackMate.Backend.RestApi.Hubs;
 
@@ -32,23 +33,9 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     /// <param name="mimeType">Mime/Type of the uploaded image.</param>
     /// <param name="chunk">Byte chunk of the image uploaded.</param>
     /// <param name="isLastChunk">Flag if the upload is completed.</param>
-    public async Task UploadPictureChunkForTrackNode(Guid trackNodeId, string mimeType, byte[] chunk, bool isLastChunk)
+    public async Task UploadPictureChunkForTrackNode(UploadPictureModel uploadPictureModel)
     {
-        logger.LogInformation("Uploaded chunk({byteSize}) for new track node {trackNodeId}.", chunk.Length, trackNodeId);
-        await _trackNodeUploadDictionary[trackNodeId].WriteAsync(chunk);
-
-        if (isLastChunk)
-        {
-            logger.LogInformation("Uploaded last chunk for track node {trackNodeId}, MimeType: {mimeType}.", trackNodeId, mimeType);
-            await Clients.Caller.SendAsync("Uploaded ", trackNodeId);
-
-            Stream stream = _trackNodeUploadDictionary[trackNodeId];
-            _trackNodeUploadDictionary.Remove(trackNodeId);
-            stream.Seek(0, SeekOrigin.Begin);
-
-            await trackNodeService.UploadTrackNodePictureAsync(new UploadPictureModel(trackNodeId, mimeType, stream), default);
-            logger.LogInformation("Uploaded picture for track node {trackNodeId}.", trackNodeId);
-        }
+        await trackNodeService.UploadTrackNodePictureAsync(uploadPictureModel, default);
     }
 
     /// <summary>
