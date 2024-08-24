@@ -20,8 +20,8 @@ public class InMemoryTrackDataSource : ITrackDataSource
         return Task.FromResult(trackModel);
     }
 
-    public Task<TrackModel> GetTrackAsync(string trackId, CancellationToken cancellationToken)
-        => Task.FromResult(_tracks.GetValueOrDefault(trackId)!);
+    public Task<TrackModel?> GetTrackAsync(string trackId, CancellationToken cancellationToken)
+        => Task.FromResult(_tracks.GetValueOrDefault(trackId));
 
     public Task<TrackModel> UpdateTrackAsync(TrackModel trackModel, CancellationToken cancellationToken)
     {
