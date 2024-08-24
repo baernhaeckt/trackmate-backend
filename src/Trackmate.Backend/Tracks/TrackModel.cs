@@ -17,10 +17,3 @@ public class TrackModel()
     public VisitedTrackNodeModel LastVisitedNode
         => VisitedNodes.OrderByDescending(n => n.VisitDateTime).FirstOrDefault();
 }
-
-public class VisitedTrackNodeModel()
-{
-    public Guid TrackNodeId { get; set; }
-
-    public DateTimeOffset VisitDateTime { get; set; }
-}

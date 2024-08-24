@@ -17,12 +17,12 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     ///     Creates a new <see cref="TrackNodeModel"/> to be used to create tracks.
     ///     This method does not complete the node, as the picture is uploaded in chunks with the method <see cref="UploadPictureChunkForTrackNode"/>.
     /// </summary>
-    public async Task CreateTrackNode(CreateTrackNodeModel model, CancellationToken cancellationToken = default)
+    public async Task<TrackNodeModel> CreateTrackNode(CreateTrackNodeModel model, CancellationToken cancellationToken = default)
     {
-        TrackNodeModel CreateTrackNodeModel = await trackNodeService.CreateTrackNodeAsync(model, cancellationToken);
-        _trackNodeUploadDictionary[CreateTrackNodeModel.Id] = new MemoryStream();
+        TrackNodeModel createTrackNodeModel = await trackNodeService.CreateTrackNodeAsync(model, cancellationToken);
+        _trackNodeUploadDictionary[createTrackNodeModel.Id] = new MemoryStream();
 
-        await Clients.Caller.SendAsync("TrackNodeCreated", CreateTrackNodeModel);
+        return createTrackNodeModel;
     }
 
     /// <summary>

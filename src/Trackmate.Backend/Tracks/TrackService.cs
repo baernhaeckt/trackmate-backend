@@ -13,16 +13,16 @@ public class TrackService(
 {
     public Task<TrackModel> StartTrackAsync(StartTrackModel startTrackModel)
     {
-
+        throw new NotImplementedException();
     }
 
     public Task<TrackModel> GetTrackAsync(string trackId)
     {
-
+        throw new NotImplementedException();
     }
 
     public Task<TrackModel> UpdateTrackAsync(UpdateTrackModel updateTrackModel)
     {
-
+        throw new NotImplementedException();
     }
 }
