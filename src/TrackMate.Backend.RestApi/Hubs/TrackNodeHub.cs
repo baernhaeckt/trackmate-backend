@@ -17,9 +17,9 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     ///     Creates a new <see cref="TrackNodeModel"/> to be used to create tracks.
     ///     This method does not complete the node, as the picture is uploaded in chunks with the method <see cref="UploadPictureChunkForTrackNode"/>.
     /// </summary>
-    public async Task<TrackNodeModel> CreateTrackNode(CreateTrackNodeModel model, CancellationToken cancellationToken = default)
+    public async Task<TrackNodeModel> CreateTrackNode(CreateTrackNodeModel model)
     {
-        TrackNodeModel createTrackNodeModel = await trackNodeService.CreateTrackNodeAsync(model, cancellationToken);
+        TrackNodeModel createTrackNodeModel = await trackNodeService.CreateTrackNodeAsync(model, default);
         _trackNodeUploadDictionary[createTrackNodeModel.Id] = new MemoryStream();
 
         return createTrackNodeModel;
@@ -32,7 +32,7 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     /// <param name="mimeType">Mime/Type of the uploaded image.</param>
     /// <param name="chunk">Byte chunk of the image uploaded.</param>
     /// <param name="isLastChunk">Flag if the upload is completed.</param>
-    public async Task UploadPictureChunkForTrackNode(Guid trackNodeId, string mimeType, byte[] chunk, bool isLastChunk, CancellationToken cancellationToken = default)
+    public async Task UploadPictureChunkForTrackNode(Guid trackNodeId, string mimeType, byte[] chunk, bool isLastChunk)
     {
         logger.LogInformation("Uploaded chunk({byteSize}) for new track node {trackNodeId}.", chunk.Length, trackNodeId);
         await _trackNodeUploadDictionary[trackNodeId].WriteAsync(chunk);
@@ -46,7 +46,7 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
             _trackNodeUploadDictionary.Remove(trackNodeId);
             stream.Seek(0, SeekOrigin.Begin);
 
-            await trackNodeService.UploadTrackNodePictureAsync(new UploadPictureModel(trackNodeId, mimeType, stream), cancellationToken);
+            await trackNodeService.UploadTrackNodePictureAsync(new UploadPictureModel(trackNodeId, mimeType, stream), default);
             logger.LogInformation("Uploaded picture for track node {trackNodeId}.", trackNodeId);
         }
     }
