@@ -100,16 +100,36 @@ public class TrackNodeNeo4JDataSourceFixture(ApplicationFixture applicationFixtu
         path.Nodes[3].Should().BeEquivalentTo(nodes[5]);
     }
 
-    public async Task ShouldFindMatch()
+    [Fact]
+    public async Task FindByEmbeddingAndDistance_ShouldFindMatch()
     {
         // Arrange
         TrackNodeNeo4JDataSource dataSource = new TrackNodeNeo4JDataSource(Options.Create(applicationFixture.Neo4JDataSourceSettings));
-        List<TrackNodeModel> nodes = await CreateManyNodesList(dataSource);
+        List<TrackNodeModel> nodes = await CreateManyNodesList(dataSource, 4);
 
+        await Task.WhenAll(
+            dataSource.AppendEmbeddingAsync(nodes[0].Id, new PictureEmbeddingModel(new float[] { 0.011F, 0.011F, 0.011F }), CancellationToken.None),
+            dataSource.AppendEmbeddingAsync(nodes[1].Id, new PictureEmbeddingModel(new float[] { 0.110F, 0.101F, 0.111F }), CancellationToken.None), 
+            dataSource.AppendEmbeddingAsync(nodes[2].Id, new PictureEmbeddingModel(new float[] { 0.011F, 0.011F, 0.011F }), CancellationToken.None),
+            dataSource.AppendEmbeddingAsync(nodes[3].Id, new PictureEmbeddingModel(new float[] { 0.011F, 0.011F, 0.011F }), CancellationToken.None));
         
+        await Task.WhenAll(
+            dataSource.CreateEdgeAsync(nodes[0].Id, nodes[1].Id, CancellationToken.None),
+            dataSource.CreateEdgeAsync(nodes[0].Id, nodes[2].Id, CancellationToken.None),
+            dataSource.CreateEdgeAsync(nodes[0].Id, nodes[3].Id, CancellationToken.None));
 
+        // Act
+        FoundTrackNodeModel foundTrackNodeModel = await dataSource.FindByEmbeddingAndDistance(
+            new PictureEmbeddingModel(new float[] { 0.111F, 0.111F, 0.111F }), 
+            nodes[0].Id, 
+            CancellationToken.None);
+
+        // Assert
+        foundTrackNodeModel.Should().NotBeNull();
+        foundTrackNodeModel.Similarity.Should().BeGreaterThan(0.95);
+        foundTrackNodeModel.TrackNodeId.Should().Be(nodes[1].Id);
+        foundTrackNodeModel.Distance.Should().Be(1);
     }
-
 
     private static async IAsyncEnumerable<TrackNodeModel> CreateManyNodes(TrackNodeNeo4JDataSource dataSource, int count = 10)
     {

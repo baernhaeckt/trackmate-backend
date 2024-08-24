@@ -80,24 +80,28 @@ public class TrackNodeNeo4JDataSource(IOptions<TrackNodeNeo4JDataSourceSettings>
         using IAsyncSession session = driver.AsyncSession();
 
         string query = @"
-                    WITH Embedding AS search_vector
+                    WITH $Embedding AS search_vector
                     MATCH path = (startNode:TrackNode)-[:PATH*1..3]->(node:TrackNode)
-                    WHERE startNode.Id = $TrackNodeId
-                    WHERE gds.similarity.euclidean(node.embedding, search_vector) > 0.8 
-                    RETURN node, gds.similarity.euclidean(node.embedding, external_vector) AS similarity, length(path) AS numberOfEdges
+                    WHERE startNode.Id = $TrackNodeId AND gds.similarity.euclidean(node.embedding, search_vector) > 0.8 
+                    RETURN node, gds.similarity.euclidean(node.embedding, search_vector) AS similarity, length(path) AS numberOfEdges
                     ORDER BY similarity DESC";
 
         IResultCursor result = await session.RunAsync(
             query,
-            new { TrackNodeId = trackNodeId, embedding.Embedding });
+            new { TrackNodeId = trackNodeId.ToString("N"), embedding.Embedding });
 
-        IRecord record = await result.SingleAsync();
+        IRecord record = (await result.ToListAsync()).First();
         INode node = record["node"].As<INode>();
+
+        if (node == null)
+        {
+            return FoundTrackNodeModel.None;
+        }
 
         return new FoundTrackNodeModel(
             Guid.Parse(node["Id"].As<string>()),
             Similarity: record["similarity"].As<double>(),
-            Distance: 0.0);
+            Distance: record["numberOfEdges"].As<double>());
     }
 
     public async Task<TrackNodePath> FindPathAsync(Guid sourceNodeId, Guid targetNodeId, CancellationToken cancellationToken)
