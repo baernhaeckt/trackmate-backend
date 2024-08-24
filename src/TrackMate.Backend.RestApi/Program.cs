@@ -43,8 +43,8 @@ namespace TrackMate.Backend.RestApi
             app.UseCors(x =>
             {
                 x.AllowAnyMethod()
-                    .WithOrigins("http://localhost:32772", "https://trackmate-backend-bscxaycdesb5gkeg.westeurope-01.azurewebsites.net")
                     .AllowAnyHeader()
+                    .SetIsOriginAllowed(host => true)
                     .WithExposedHeaders("Authorization")
                     .AllowCredentials();
             });
