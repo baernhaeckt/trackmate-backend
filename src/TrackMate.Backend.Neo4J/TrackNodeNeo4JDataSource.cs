@@ -8,7 +8,7 @@ using Trackmate.Backend.TrackNodes;
 namespace TrackMate.Backend.Neo4J;
 
 public class TrackNodeNeo4JDataSource(
-    Logger<TrackNodeNeo4JDataSource> logger,
+    ILogger<TrackNodeNeo4JDataSource> logger,
     IOptions<TrackNodeNeo4JDataSourceSettings> settings) : ITrackNodeDataSource
 {
     private const string TrackNodeLabel = "TrackNode";
