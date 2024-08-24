@@ -90,7 +90,13 @@ public class TrackNodeNeo4JDataSource(IOptions<TrackNodeNeo4JDataSourceSettings>
             query,
             new { TrackNodeId = trackNodeId.ToString("N"), embedding.Embedding });
 
-        IRecord record = (await result.ToListAsync()).First();
+        IRecord? record = (await result.ToListAsync()).FirstOrDefault();
+
+        if (record == null)
+        {
+            return FoundTrackNodeModel.None;
+        }
+
         INode node = record["node"].As<INode>();
 
         if (node == null)

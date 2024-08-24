@@ -40,8 +40,8 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     /// <param name="startTrackModel">Information to create a track.</param>
     public async Task<string> StartTrack(StartTrackModel startTrackModel)
     {
+        logger.LogInformation("Starting track from:{startTrackNodeId} to:{goalTrackNodeId}.", startTrackModel.StartTrackNodeId, startTrackModel.GoalTrackNodeId);
         await Task.CompletedTask;
-
         TrackModel track = await trackService.StartTrackAsync(startTrackModel);
 
         _trackSubscribers.AddOrUpdate(
@@ -62,6 +62,7 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     /// <param name="trackId">Id of the track to join.</param>
     public async Task JoinTrack(string trackId)
     {
+        logger.LogInformation("User joined track {trackId}.", trackId);
         _trackSubscribers[trackId].Add(Clients.Caller);
         await SendToTrackAsync(trackId, "UserJoined");
     }
@@ -72,6 +73,7 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     /// <param name="trackId">Id of the track to complete.</param>
     public async Task CompleteTrack(string trackId)
     {
+        logger.LogInformation("Track {trackId} completed.", trackId);
         await SendToTrackAsync(trackId, "TrackCompleted");
         _trackSubscribers.TryRemove(trackId, out _);
     }
