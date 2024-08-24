@@ -16,6 +16,8 @@ public class TrackService(
     PictureEmbeddingClient pictureEmbeddingClient,
     InstructionsClient instructionsClient)
 {
+    public delegate Task AnnouncePictureDetectionResult(bool found);
+
     public async Task<TrackModel> StartTrackAsync(StartTrackModel startTrackModel)
     {
         CreateTrackModel createTrackModel = await CreateTrackModel(startTrackModel);
@@ -33,7 +35,10 @@ public class TrackService(
     public Task<TrackModel> GetTrackAsync(string trackId)
         => trackDataSource.GetTrackAsync(trackId, CancellationToken.None);
 
-    public async Task<TrackUpdateResult> UpdateTrackAsync(UploadTrackPositionPicture uploadTrackPositionPicture, CancellationToken cancellationToken = default)
+    public async Task<TrackUpdateResult> UpdateTrackAsync(
+        UploadTrackPositionPicture uploadTrackPositionPicture,
+        AnnouncePictureDetectionResult announcePictureDetectionResult,
+        CancellationToken cancellationToken = default)
     {
         TrackModel track = await trackDataSource.GetTrackAsync(uploadTrackPositionPicture.TrackId, cancellationToken);
         track.LastPictureUploadDateTime = DateTimeOffset.Now;
@@ -43,22 +48,24 @@ public class TrackService(
 
         if (foundTrackNodeModel == FoundTrackNodeModel.None)
         {
+            await announcePictureDetectionResult(false);
             logger.LogInformation("No track node found for embedding.");
             return TrackUpdateResult.NoLocation;
         }
+        await announcePictureDetectionResult(true);
 
         TrackNodeModel currentTrackNode = await trackNodeDataSource.GetTrackNodeAsync(track.LastVisitedNode.TrackNode.Id, CancellationToken.None);
         TrackNodePath path = await trackNodeDataSource.FindPathAsync(foundTrackNodeModel.TrackNodeId, track.GoalNode.Id, CancellationToken.None);
-        TrackNodeModel nextTrackNodeModel = await FindNextRelevantTrackNodeModel(path, CancellationToken.None);
+        TrackNodeModel nextTrackNodeModel = await FindNextRelevantTrackNodeModel(path);
 
-        if (IsInstructionNecessary(track, nextTrackNodeModel, CancellationToken.None)
+        if (IsInstructionNecessary(track, nextTrackNodeModel)
             || track.LastHintDateTime + trackServiceSettings.Value.InstructionTimeout < DateTimeOffset.Now)
         {
             logger.LogInformation("A instruction is generated, either because necessary or timeout reached.");
             track.VisitedNodes.Add(new VisitedTrackNodeModel(currentTrackNode, DateTimeOffset.Now));
             track.LastHintDateTime = DateTimeOffset.Now;
 
-            InstructionRequestModel instructionRequestModel = new InstructionRequestModel(
+            InstructionRequestModel instructionRequestModel = new(
                 track.LastVisitedNode.TrackNode.Location,
                 nextTrackNodeModel.Location);
 
@@ -76,14 +83,17 @@ public class TrackService(
     ///     We currently take the next <see cref="TrackNodeModel"> from the path to generate an instruction. <br />
     ///     TODO: A better approach would be to take the next <see cref="TrackNodeModel"> before a big angle change. 
     /// </summary>
-    private async Task<TrackNodeModel> FindNextRelevantTrackNodeModel(TrackNodePath path, CancellationToken cancellationToken)
-        => path.Nodes[1];
+    private static async Task<TrackNodeModel> FindNextRelevantTrackNodeModel(TrackNodePath path)
+    {
+        await Task.CompletedTask;
+        return path.Nodes[1];
+    }
 
     /// <summary>
     ///     Checks if with the current <see cref="TrackModel"/> and its <see cref="TrackModel.CurrentVector"/> an instruction is necessary
     ///     when going to the next <see cref="TrackNodeModel"/>.
     /// </summary>
-    private bool IsInstructionNecessary(TrackModel track, TrackNodeModel nextTrackNodeModel, CancellationToken cancellationToken)
+    private bool IsInstructionNecessary(TrackModel track, TrackNodeModel nextTrackNodeModel)
     {
         Vector3 currentVector = track.CurrentVector;
         Vector3 nextVector = nextTrackNodeModel.Location.AsCoordinates();

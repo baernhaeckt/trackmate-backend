@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
+using System.Text;
 using Trackmate.Backend;
 using Trackmate.Backend.Models;
 using Trackmate.Backend.TrackNodes;
@@ -39,18 +40,20 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     /// <param name="startTrackModel">Information to create a track.</param>
     public async Task<string> StartTrack(StartTrackModel startTrackModel)
     {
-        string trackId = Guid.NewGuid().ToString("N").Substring(0, 8);
+        await Task.CompletedTask;
+
+        TrackModel track = await trackService.StartTrackAsync(startTrackModel);
 
         _trackSubscribers.AddOrUpdate(
-            trackId, 
-            new List<ISingleClientProxy> { Clients.Caller },
+            track.TrackId, 
+            [ Clients.Caller ],
             (_, list) => 
             {
                 list.Add(Clients.Caller);
                 return list;
             });
 
-        return trackId;
+        return track.TrackId;
     }
 
     /// <summary>
@@ -77,9 +80,23 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     {
         logger.LogInformation("Uploaded picture for track position {trackId}.", uploadTrackPositionPicture.TrackId);
 
-        TrackUpdateResult result = await trackService.UpdateTrackAsync(uploadTrackPositionPicture, default);
+        Task announce(bool success) => SendToTrackAsync(uploadTrackPositionPicture.TrackId, "TrackPositionPictureMatched", success);
+        TrackUpdateResult result = await trackService.UpdateTrackAsync(uploadTrackPositionPicture, announce, default);
+
+        if (result.type == TrackUpdateResultType.NewInstruction)
+        {
+            await Clients.Caller.SendAsync("InstructionAudio", Convert.ToBase64String(ReadAllBytesFromStream(result.instructionAudio!)));
+            await SendToTrackAsync(uploadTrackPositionPicture.TrackId, "InstructionText", result.instruction);
+        }
     }
 
-    private Task SendToTrackAsync(string trackId, string methodName, object? arg1 = null)
+    private static byte[] ReadAllBytesFromStream(Stream stream)
+    {
+        using MemoryStream memoryStream = new();
+        stream.CopyTo(memoryStream);
+        return memoryStream.ToArray();
+    }
+
+    private static Task SendToTrackAsync(string trackId, string methodName, object? arg1 = null)
         => Task.WhenAll(_trackSubscribers[trackId].Select(client => client.SendAsync(methodName, arg1)));
 }

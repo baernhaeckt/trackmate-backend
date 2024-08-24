@@ -2,5 +2,5 @@
 
 public class InstructionsClientSettings
 {
-    public Uri BaseUri { get; set; }
+    public required Uri BaseUri { get; set; }
 }

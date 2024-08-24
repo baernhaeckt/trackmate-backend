@@ -5,9 +5,9 @@ namespace Trackmate.Backend.Tracks;
 
 public class TrackModel()
 {
-    public string TrackId { get; set; }
+    public required string TrackId { get; set; }
 
-    public TrackNodeModel GoalNode { get; set; }
+    public required TrackNodeModel GoalNode { get; set; }
 
     public DateTimeOffset LastPictureUploadDateTime { get; set; }
 
@@ -26,9 +26,9 @@ public class TrackModel()
         }
     }
 
-    public List<VisitedTrackNodeModel> VisitedNodes { get; set; } = new List<VisitedTrackNodeModel>();
+    public List<VisitedTrackNodeModel> VisitedNodes { get; init; } = [];
 
     public VisitedTrackNodeModel LastVisitedNode
-        => VisitedNodes.OrderByDescending(n => n.VisitDateTime).FirstOrDefault();
+        => VisitedNodes.OrderByDescending(n => n.VisitDateTime).First();
 
 }

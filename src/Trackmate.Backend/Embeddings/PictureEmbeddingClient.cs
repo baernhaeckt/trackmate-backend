@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 
 namespace Trackmate.Backend.Embeddings;
 
-public class PictureEmbeddingClient(
+public sealed class PictureEmbeddingClient(
     IOptions<PictureEmbeddingClientSettings> settings, 
     Func<HttpClientHandler, HttpClient>? httpClientBuilder = null)
     : IDisposable
