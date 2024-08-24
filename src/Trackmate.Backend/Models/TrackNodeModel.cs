@@ -1,3 +1,3 @@
 ﻿namespace Trackmate.Backend.Models;
 
-public record TrackNodeModel(Guid Id, GeoLocation Location, TransformationVector Vector);
+public record TrackNodeModel(Guid Id, GeoLocation Location, TransformationVector Vector, Orientation Orientation);
