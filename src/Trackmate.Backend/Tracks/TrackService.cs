@@ -16,7 +16,7 @@ public class TrackService(
     PictureEmbeddingClient pictureEmbeddingClient,
     InstructionsClient instructionsClient)
 {
-    public delegate Task AnnouncePictureDetectionResult(bool found);
+    public delegate Task AnnouncePictureDetectionResult(FoundTrackNodeModel? found);
 
     public async Task<TrackModel> StartTrackAsync(StartTrackModel startTrackModel)
     {
@@ -48,11 +48,11 @@ public class TrackService(
 
         if (foundTrackNodeModel == FoundTrackNodeModel.None)
         {
-            await announcePictureDetectionResult(false);
+            await announcePictureDetectionResult(null);
             logger.LogInformation("No track node found for embedding.");
             return TrackUpdateResult.NoLocation;
         }
-        await announcePictureDetectionResult(true);
+        await announcePictureDetectionResult(foundTrackNodeModel);
 
         TrackNodeModel currentTrackNode = await trackNodeDataSource.GetTrackNodeAsync(track.LastVisitedNode.TrackNode.Id, CancellationToken.None);
         TrackNodePath path = await trackNodeDataSource.FindPathAsync(foundTrackNodeModel.TrackNodeId, track.GoalNode.Id, CancellationToken.None);

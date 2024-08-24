@@ -82,7 +82,7 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     {
         logger.LogInformation("Uploaded picture for track position {trackId}.", uploadTrackPositionPicture.TrackId);
 
-        Task announce(bool success) => SendToTrackAsync(uploadTrackPositionPicture.TrackId, "TrackPositionPictureMatched", success);
+        Task announce(FoundTrackNodeModel? foundModel) => SendToTrackAsync(uploadTrackPositionPicture.TrackId, "TrackPositionPictureMatched", foundModel);
         TrackUpdateResult result = await trackService.UpdateTrackAsync(uploadTrackPositionPicture, announce, default);
 
         if (result.type == TrackUpdateResultType.NewInstruction)
