@@ -47,6 +47,7 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
             stream.Seek(0, SeekOrigin.Begin);
 
             await trackNodeService.UploadTrackNodePictureAsync(new UploadPictureModel(trackNodeId, mimeType, stream), cancellationToken);
+            logger.LogInformation("Uploaded picture for track node {trackNodeId}.", trackNodeId);
         }
     }
 
