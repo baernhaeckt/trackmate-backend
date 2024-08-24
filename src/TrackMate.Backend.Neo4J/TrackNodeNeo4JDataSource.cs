@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Neo4j.Driver;
 using Trackmate.Backend.Embeddings;
 using Trackmate.Backend.Models;
@@ -6,7 +7,9 @@ using Trackmate.Backend.TrackNodes;
 
 namespace TrackMate.Backend.Neo4J;
 
-public class TrackNodeNeo4JDataSource(IOptions<TrackNodeNeo4JDataSourceSettings> settings) : ITrackNodeDataSource
+public class TrackNodeNeo4JDataSource(
+    Logger<TrackNodeNeo4JDataSource> logger,
+    IOptions<TrackNodeNeo4JDataSourceSettings> settings) : ITrackNodeDataSource
 {
     private const string TrackNodeLabel = "TrackNode";
 
@@ -82,7 +85,7 @@ public class TrackNodeNeo4JDataSource(IOptions<TrackNodeNeo4JDataSourceSettings>
         string query = @"
                     WITH $Embedding AS search_vector
                     MATCH path = (startNode:TrackNode)-[:PATH*1..10]->(node:TrackNode)
-                    WHERE startNode.Id = $TrackNodeId AND gds.similarity.euclidean(node.embedding, search_vector) > 0.8 
+                    WHERE startNode.Id = $TrackNodeId AND gds.similarity.euclidean(node.embedding, search_vector) > 0.5 
                     RETURN node, gds.similarity.euclidean(node.embedding, search_vector) AS similarity, length(path) AS numberOfEdges
                     ORDER BY similarity DESC";
 
@@ -103,6 +106,11 @@ public class TrackNodeNeo4JDataSource(IOptions<TrackNodeNeo4JDataSourceSettings>
         {
             return FoundTrackNodeModel.None;
         }
+
+        logger.LogInformation("Found track node {TrackNodeId} with similarity {Similarity} and distance {Distance}.", 
+            node["Id"].As<string>(), 
+            record["similarity"].As<double>(), 
+            record["numberOfEdges"].As<double>());
 
         return new FoundTrackNodeModel(
             Guid.Parse(node["Id"].As<string>()),
