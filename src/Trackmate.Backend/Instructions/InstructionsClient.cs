@@ -21,16 +21,27 @@ public class InstructionsClient(
         return newClient;
     }
 
-    public async Task<InstructionAudioStream> CreateInstructionAsync(InstructionRequestModel instructionModel)
+    public async Task<Stream> CreateInstructionAudioAsync(InstructionRequestModel instructionModel)
     {
-        const string uri = "api/v1/instructions/create";
+        const string uri = "api/v1/instructions/generate_audio";
 
         HttpResponseMessage response = await HttpClient.PostAsJsonAsync(
             new Uri(uri, UriKind.Relative),
             instructionModel);
 
         response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStreamAsync();
+    }
 
-        return new InstructionAudioStream(await response.Content.ReadAsStreamAsync());
+    public async Task<string> CreateInstructionTextAsync(InstructionRequestModel instructionModel)
+    {
+        const string uri = "api/v1/instructions/generate_text";
+
+        HttpResponseMessage response = await HttpClient.PostAsJsonAsync(
+            new Uri(uri, UriKind.Relative),
+            instructionModel);
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStringAsync();
     }
 }

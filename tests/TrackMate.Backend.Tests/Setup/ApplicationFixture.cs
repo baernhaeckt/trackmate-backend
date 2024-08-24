@@ -13,6 +13,8 @@ public sealed class ApplicationFixture
 
     public int Neo4JBoltPort { get; private set; }
 
+    public TrackMateWebApplicationFactory WebApplicationFactory { get; }
+
     public TrackNodeNeo4JDataSourceSettings Neo4JDataSourceSettings
     {
         get
@@ -45,7 +47,10 @@ public sealed class ApplicationFixture
 
         System.Net.IPEndPoint neo4JWebPort = neo4JContainer.ToHostExposedEndpoint($"{Neo4JContainerWebPort}/tcp");
         Neo4JWebPort = neo4JWebPort.Port;
+
         System.Net.IPEndPoint neo4JBoltPort = neo4JContainer.ToHostExposedEndpoint($"{Neo4JContainerBoltPort}/tcp");
         Neo4JBoltPort = neo4JBoltPort.Port;
+
+        WebApplicationFactory = new TrackMateWebApplicationFactory(Neo4JDataSourceSettings);
     }
 }

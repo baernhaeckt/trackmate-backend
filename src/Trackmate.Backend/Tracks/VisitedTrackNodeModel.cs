@@ -1,8 +1,5 @@
-﻿namespace Trackmate.Backend.Tracks;
+﻿using Trackmate.Backend.Models;
 
-public class VisitedTrackNodeModel()
-{
-    public Guid TrackNodeId { get; set; }
+namespace Trackmate.Backend.Tracks;
 
-    public DateTimeOffset VisitDateTime { get; set; }
-}
+public record VisitedTrackNodeModel(TrackNodeModel TrackNode, DateTimeOffset VisitDateTime);

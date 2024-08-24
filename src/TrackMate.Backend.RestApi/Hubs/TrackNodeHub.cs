@@ -3,16 +3,13 @@ using System.Collections.Concurrent;
 using Trackmate.Backend;
 using Trackmate.Backend.Models;
 using Trackmate.Backend.TrackNodes;
+using Trackmate.Backend.Tracks;
 
 namespace TrackMate.Backend.RestApi.Hubs;
 
-public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNodeService) : Hub
+public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNodeService, TrackService trackService) : Hub
 {
     private static readonly ConcurrentDictionary<string, List<ISingleClientProxy>> _trackSubscribers = new();
-
-    private static readonly Dictionary<Guid, Stream> _trackNodeUploadDictionary = new();
-
-    private static readonly Dictionary<string, Stream> _trackPictureUploadDictionary = new();
 
     /// <summary>
     ///     Creates a new <see cref="TrackNodeModel"/> to be used to create tracks.
@@ -20,10 +17,7 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     /// </summary>
     public async Task<TrackNodeModel> CreateTrackNode(CreateTrackNodeModel model)
     {
-        TrackNodeModel createTrackNodeModel = await trackNodeService.CreateTrackNodeAsync(model, default);
-        _trackNodeUploadDictionary[createTrackNodeModel.Id] = new MemoryStream();
-
-        return createTrackNodeModel;
+        return await trackNodeService.CreateTrackNodeAsync(model, default);
     }
 
     /// <summary>
@@ -43,7 +37,7 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     ///     A track id is created and returned to the caller, which can be used for others to join the track.
     /// </summary>
     /// <param name="startTrackModel">Information to create a track.</param>
-    public async Task StartTrack(StartTrackModel startTrackModel)
+    public async Task<string> StartTrack(StartTrackModel startTrackModel)
     {
         string trackId = Guid.NewGuid().ToString("N").Substring(0, 8);
 
@@ -56,7 +50,7 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
                 return list;
             });
 
-        await Clients.Caller.SendAsync("TrackStarted", trackId);
+        return trackId;
     }
 
     /// <summary>
@@ -72,38 +66,18 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     /// <summary>
     ///     Completes a track, notifying all subscribers that the track is completed.
     /// </summary>
-    /// <param name="trackId">Ud of the track to complete.</param>
+    /// <param name="trackId">Id of the track to complete.</param>
     public async Task CompleteTrack(string trackId)
     {
         await SendToTrackAsync(trackId, "TrackCompleted");
         _trackSubscribers.TryRemove(trackId, out _);
     }
 
-    /// <summary>
-    ///    Uploads a picture for an ongoing track.
-    /// </summary>
-    /// <param name="trackId"></param>
-    /// <param name="mimeType"></param>
-    /// <param name="chunk"></param>
-    /// <param name="isLastChunk"></param>
-    /// <returns></returns>
-    public async Task UploadTrackPositionPicture(string trackId, string mimeType, byte[] chunk, bool isLastChunk)
+    public async Task UploadTrackPositionPicture(UploadTrackPositionPicture uploadTrackPositionPicture)
     {
-        logger.LogInformation("Uploaded chunk({byteSize}) for track position {trackId}.", chunk.Length, trackId);
+        logger.LogInformation("Uploaded picture for track position {trackId}.", uploadTrackPositionPicture.TrackId);
 
-        await _trackPictureUploadDictionary[trackId].WriteAsync(chunk);
-
-        if (isLastChunk)
-        {
-            logger.LogInformation("Uploaded last chunk for track {trackId} to find position, MimeType: {mimeType}.", trackId, mimeType);
-            await Clients.Caller.SendAsync("TrackPositionPictureUploaded", trackId);
-
-            Stream stream = _trackPictureUploadDictionary[trackId];
-            _trackPictureUploadDictionary.Remove(trackId);
-            stream.Seek(0, SeekOrigin.Begin);
-
-            // await trackNodeService.UploadPicture(new UploadPictureModel(trackNodeId, mimeType, stream));
-        }
+        TrackUpdateResult result = await trackService.UpdateTrackAsync(uploadTrackPositionPicture, default);
     }
 
     private Task SendToTrackAsync(string trackId, string methodName, object? arg1 = null)

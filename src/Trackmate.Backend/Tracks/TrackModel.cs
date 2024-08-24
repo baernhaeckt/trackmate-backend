@@ -1,4 +1,5 @@
-﻿using Trackmate.Backend.Models;
+﻿using System.Numerics;
+using Trackmate.Backend.Models;
 
 namespace Trackmate.Backend.Tracks;
 
@@ -12,8 +13,22 @@ public class TrackModel()
 
     public DateTimeOffset LastHintDateTime { get; set; }
 
+    public Vector3 CurrentVector
+    {
+        get
+        {
+            if (VisitedNodes.Count > 1)
+            {
+                return VisitedNodes[^1].TrackNode.Location.GetVector(VisitedNodes[^2].TrackNode.Location);
+            }
+
+            return Vector3.Zero;
+        }
+    }
+
     public List<VisitedTrackNodeModel> VisitedNodes { get; set; } = new List<VisitedTrackNodeModel>();
 
     public VisitedTrackNodeModel LastVisitedNode
         => VisitedNodes.OrderByDescending(n => n.VisitDateTime).FirstOrDefault();
+
 }

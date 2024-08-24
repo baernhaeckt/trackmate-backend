@@ -22,6 +22,9 @@ public class PictureEmbeddingClient(
         return newClient;
     }
 
+    public async Task<PictureEmbeddingModel> GeneratePictureEmbeddingAsync(string mimeType, string pictureBase64)
+        => await GeneratePictureEmbeddingAsync(mimeType, new MemoryStream(Convert.FromBase64String(pictureBase64)));
+
     public async Task<PictureEmbeddingModel> GeneratePictureEmbeddingAsync(string mimeType, Stream pictureDataStream)
     {
         const string uri = "api/v1/embedding/create";
