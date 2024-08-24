@@ -12,15 +12,20 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["src/TrackMate.Backend.RestApi/TrackMate.Backend.RestApi.csproj", "TrackMate.Backend.RestApi/"]
-RUN dotnet restore "./TrackMate.Backend.RestApi/TrackMate.Backend.RestApi.csproj"
-COPY . .
+COPY ["src/Trackmate.Backend/Trackmate.Backend.csproj", "Trackmate.Backend/"]
+COPY ["src/TrackMate.Backend.Neo4J/TrackMate.Backend.Neo4J.csproj", "TrackMate.Backend.Neo4J/"]
+WORKDIR /src/TrackMate.Backend.RestApi
+RUN dotnet restore
+WORKDIR /src
+COPY src/ .
 WORKDIR "/src/TrackMate.Backend.RestApi"
-RUN dotnet build "./TrackMate.Backend.RestApi.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build -c $BUILD_CONFIGURATION --no-restore -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./TrackMate.Backend.RestApi.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+WORKDIR "/src/TrackMate.Backend.RestApi"
+RUN dotnet publish -c $BUILD_CONFIGURATION --no-restore -o /app/publish /p:UseAppHost=false
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
