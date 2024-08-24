@@ -40,5 +40,5 @@ public class CreateTrackNodeModelBuilder
     }
 
     public CreateTrackNodeModel Build() 
-        => new CreateTrackNodeModel(_geoLocation, _tranformationVector, _orientation);
+        => new CreateTrackNodeModel(_geoLocation, _tranformationVector, _orientation, _previousTrackNodeId);
 }

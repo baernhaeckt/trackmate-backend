@@ -176,6 +176,40 @@ public class TrackNodeNeo4JDataSourceFixture(ApplicationFixture applicationFixtu
     }
 
 
+    [Fact]
+    public async Task FindByEmbeddingAndDistance_ShouldMatchWithImages_AgainstProd()
+    {
+        // Arrange
+        TrackNodeNeo4JDataSource dataSource = new TrackNodeNeo4JDataSource(logger, Options.Create(new TrackNodeNeo4JDataSourceSettings() {
+            Uri = "bolt://trackmate-db--zin1cgv.lemonstone-52a4c370.northeurope.azurecontainerapps.io:7687",
+            Username = "neo4j",
+            Password = "barbara-average-slogan-random-fiction-9892"
+        }));
+        IOptions<PictureEmbeddingClientSettings> settings = Options.Create(new PictureEmbeddingClientSettings()
+        {
+            BaseUri = new Uri("https://trackmate-embedding-cbfje4ebcfgsfaay.westeurope-01.azurewebsites.net/")
+        });
+
+        using PictureEmbeddingClient client = new PictureEmbeddingClient(settings);
+        using Stream fileStream = File.OpenRead($"Data/set1image5.jpeg");
+        PictureEmbeddingModel embedding = await client.GeneratePictureEmbeddingAsync("image/jpeg", fileStream);
+
+        //var trackNode = await dataSource.CreateTrackNodeAsync(CreateTrackNodeModelBuilder.Create()
+        //    .WithPreviousTrackNodeId(Guid.Parse("e44e554900e74818bd12162b65ec2495")).Build(), CancellationToken.None);
+        // await dataSource.AppendEmbeddingAsync(trackNode.Id, embedding, CancellationToken.None);
+
+        // Act
+        FoundTrackNodeModel foundTrackNodeModel = await dataSource.FindByEmbeddingAndDistance(
+            embedding,
+            Guid.Parse("3043adb163f24786bf95723ab0684cd6"),
+            CancellationToken.None);
+
+        // Assert
+
+        foundTrackNodeModel.Should().NotBeNull();
+    }
+
+
     private static async IAsyncEnumerable<TrackNodeModel> CreateManyNodes(TrackNodeNeo4JDataSource dataSource, int count = 10)
     {
         for (int i = 0; i < count; i++)

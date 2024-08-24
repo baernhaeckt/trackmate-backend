@@ -85,8 +85,8 @@ public class TrackNodeNeo4JDataSource(
         string query = @"
                     WITH $Embedding AS search_vector
                     MATCH (node:TrackNode)
-                    WHERE gds.similarity.euclidean(node.embedding, search_vector) > 0.5 
-                    RETURN node, gds.similarity.euclidean(node.embedding, search_vector) AS similarity
+                    WHERE gds.similarity.cosine(node.embedding, search_vector) > 0.5 
+                    RETURN node, gds.similarity.cosine(node.embedding, search_vector) AS similarity
                     ORDER BY similarity DESC";
 
         IResultCursor result = await session.RunAsync(
