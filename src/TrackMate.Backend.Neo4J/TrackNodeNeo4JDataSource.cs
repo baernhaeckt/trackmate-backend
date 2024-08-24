@@ -81,7 +81,7 @@ public class TrackNodeNeo4JDataSource(IOptions<TrackNodeNeo4JDataSourceSettings>
 
         string query = @"
                     WITH $Embedding AS search_vector
-                    MATCH path = (startNode:TrackNode)-[:PATH*1..3]->(node:TrackNode)
+                    MATCH path = (startNode:TrackNode)-[:PATH*1..10]->(node:TrackNode)
                     WHERE startNode.Id = $TrackNodeId AND gds.similarity.euclidean(node.embedding, search_vector) > 0.8 
                     RETURN node, gds.similarity.euclidean(node.embedding, search_vector) AS similarity, length(path) AS numberOfEdges
                     ORDER BY similarity DESC";
