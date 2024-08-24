@@ -33,7 +33,7 @@ public class CreateTrackNodeModelBuilder
         return this;
     }
 
-    public CreateTrackNodeModelBuilder WithPreviousTrackNodeId(Guid previousTrackNodeId)
+    public CreateTrackNodeModelBuilder WithPreviousTrackNodeId(Guid? previousTrackNodeId)
     {
         _previousTrackNodeId = previousTrackNodeId;
         return this;

@@ -84,9 +84,9 @@ public class TrackNodeNeo4JDataSource(
 
         string query = @"
                     WITH $Embedding AS search_vector
-                    MATCH path = (startNode:TrackNode)-[:PATH*1..10]->(node:TrackNode)
-                    WHERE startNode.Id = $TrackNodeId AND gds.similarity.euclidean(node.embedding, search_vector) > 0.5 
-                    RETURN node, gds.similarity.euclidean(node.embedding, search_vector) AS similarity, length(path) AS numberOfEdges
+                    MATCH (node:TrackNode)
+                    WHERE gds.similarity.euclidean(node.embedding, search_vector) > 0.5 
+                    RETURN node, gds.similarity.euclidean(node.embedding, search_vector) AS similarity
                     ORDER BY similarity DESC";
 
         IResultCursor result = await session.RunAsync(
@@ -110,12 +110,12 @@ public class TrackNodeNeo4JDataSource(
         logger.LogInformation("Found track node {TrackNodeId} with similarity {Similarity} and distance {Distance}.", 
             node["Id"].As<string>(), 
             record["similarity"].As<double>(), 
-            record["numberOfEdges"].As<double>());
+            0);
 
         return new FoundTrackNodeModel(
             Guid.Parse(node["Id"].As<string>()),
             Similarity: record["similarity"].As<double>(),
-            Distance: record["numberOfEdges"].As<double>());
+            Distance: 0);
     }
 
     public async Task<TrackNodePath> FindPathAsync(Guid sourceNodeId, Guid targetNodeId, CancellationToken cancellationToken)

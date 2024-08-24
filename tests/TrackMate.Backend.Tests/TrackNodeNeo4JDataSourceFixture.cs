@@ -1,4 +1,6 @@
 ﻿using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Trackmate.Backend.Embeddings;
 using Trackmate.Backend.Models;
@@ -13,11 +15,13 @@ namespace TrackMate.Backend.Tests;
 [Collection(ApplicationCollection.Name)]
 public class TrackNodeNeo4JDataSourceFixture(ApplicationFixture applicationFixture)
 {
+    ILogger<TrackNodeNeo4JDataSource> logger = new NullLogger<TrackNodeNeo4JDataSource>();
+
     [Fact]
     public async Task CreateTrackNodeAsync_ShouldInsertTrackNode()
     {
         // Arrange
-        TrackNodeNeo4JDataSource dataSource = new TrackNodeNeo4JDataSource(Options.Create(applicationFixture.Neo4JDataSourceSettings));
+        TrackNodeNeo4JDataSource dataSource = new TrackNodeNeo4JDataSource(logger, Options.Create(applicationFixture.Neo4JDataSourceSettings));
         CreateTrackNodeModel model = CreateTrackNodeModelBuilder.Create().Build();
 
         // Act
@@ -36,7 +40,7 @@ public class TrackNodeNeo4JDataSourceFixture(ApplicationFixture applicationFixtu
     public async Task CreateTrackNodeAsync_ShouldInsertTrackNodeAndCreateRelation()
     {
         // Arrange
-        TrackNodeNeo4JDataSource dataSource = new TrackNodeNeo4JDataSource(Options.Create(applicationFixture.Neo4JDataSourceSettings));
+        TrackNodeNeo4JDataSource dataSource = new TrackNodeNeo4JDataSource(logger, Options.Create(applicationFixture.Neo4JDataSourceSettings));
         CreateTrackNodeModel model = CreateTrackNodeModelBuilder.Create().Build();
         TrackNodeModel createdModel = await dataSource.CreateTrackNodeAsync(model, CancellationToken.None);
 
@@ -54,7 +58,7 @@ public class TrackNodeNeo4JDataSourceFixture(ApplicationFixture applicationFixtu
     public async Task AppendEmbeddingAsync_ShouldAppendEmbeddingToTrackNode()
     {
         // Arrange
-        TrackNodeNeo4JDataSource dataSource = new TrackNodeNeo4JDataSource(Options.Create(applicationFixture.Neo4JDataSourceSettings));
+        TrackNodeNeo4JDataSource dataSource = new TrackNodeNeo4JDataSource(logger, Options.Create(applicationFixture.Neo4JDataSourceSettings));
         CreateTrackNodeModel model = CreateTrackNodeModelBuilder.Create().Build();
         TrackNodeModel createdModel = await dataSource.CreateTrackNodeAsync(model, CancellationToken.None);
 
@@ -71,7 +75,7 @@ public class TrackNodeNeo4JDataSourceFixture(ApplicationFixture applicationFixtu
     public async Task FindPathAsync_ShouldFindBestPath()
     {
         // Arrange
-        TrackNodeNeo4JDataSource dataSource = new TrackNodeNeo4JDataSource(Options.Create(applicationFixture.Neo4JDataSourceSettings));
+        TrackNodeNeo4JDataSource dataSource = new TrackNodeNeo4JDataSource(logger, Options.Create(applicationFixture.Neo4JDataSourceSettings));
         List<TrackNodeModel> nodes = await CreateManyNodesList(dataSource);
 
         // Create Circle Edges
@@ -104,7 +108,7 @@ public class TrackNodeNeo4JDataSourceFixture(ApplicationFixture applicationFixtu
     public async Task FindByEmbeddingAndDistance_ShouldFindMatch()
     {
         // Arrange
-        TrackNodeNeo4JDataSource dataSource = new TrackNodeNeo4JDataSource(Options.Create(applicationFixture.Neo4JDataSourceSettings));
+        TrackNodeNeo4JDataSource dataSource = new TrackNodeNeo4JDataSource(logger, Options.Create(applicationFixture.Neo4JDataSourceSettings));
         List<TrackNodeModel> nodes = await CreateManyNodesList(dataSource, 4);
 
         await Task.WhenAll(
@@ -130,6 +134,47 @@ public class TrackNodeNeo4JDataSourceFixture(ApplicationFixture applicationFixtu
         foundTrackNodeModel.TrackNodeId.Should().Be(nodes[1].Id);
         foundTrackNodeModel.Distance.Should().Be(1);
     }
+
+    [Fact]
+    public async Task FindByEmbeddingAndDistance_ShouldMatchWithImages()
+    {
+        // Arrange
+        TrackNodeNeo4JDataSource dataSource = new TrackNodeNeo4JDataSource(logger, Options.Create(applicationFixture.Neo4JDataSourceSettings));
+        IOptions<PictureEmbeddingClientSettings> settings = Options.Create(new PictureEmbeddingClientSettings()
+        {
+            BaseUri = new Uri("https://trackmate-embedding-cbfje4ebcfgsfaay.westeurope-01.azurewebsites.net/")
+        });
+
+        using PictureEmbeddingClient client = new PictureEmbeddingClient(settings);
+        Guid? lastNodeId = null;
+
+        Dictionary<Guid, PictureEmbeddingModel> embeddings = new Dictionary<Guid, PictureEmbeddingModel>();
+
+        for (int i = 1; i < 9; i++)
+        {
+            using Stream fileStream = File.OpenRead($"Data/set1image{i}.jpeg");
+            PictureEmbeddingModel embedding = await client.GeneratePictureEmbeddingAsync("image/jpeg", fileStream);
+            TrackNodeModel trackNode = await dataSource.CreateTrackNodeAsync(CreateTrackNodeModelBuilder
+                .Create()
+                .WithPreviousTrackNodeId(lastNodeId)
+                .Build(), CancellationToken.None);
+            lastNodeId = trackNode.Id;
+
+            embeddings.Add(trackNode.Id, embedding);
+            await dataSource.AppendEmbeddingAsync(trackNode.Id, embedding, CancellationToken.None);
+        }
+
+        // Act
+        FoundTrackNodeModel foundTrackNodeModel = await dataSource.FindByEmbeddingAndDistance(
+            embeddings[embeddings.Keys.Last()],
+            embeddings.Keys.First(),
+            CancellationToken.None);
+
+        // Assert
+
+        foundTrackNodeModel.Should().NotBeNull();
+    }
+
 
     private static async IAsyncEnumerable<TrackNodeModel> CreateManyNodes(TrackNodeNeo4JDataSource dataSource, int count = 10)
     {

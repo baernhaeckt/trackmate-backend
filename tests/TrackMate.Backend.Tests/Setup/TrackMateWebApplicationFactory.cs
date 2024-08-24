@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Trackmate.Backend.TrackNodes;
 using TrackMate.Backend.Neo4J;
@@ -15,7 +16,9 @@ public class TrackMateWebApplicationFactory(TrackNodeNeo4JDataSourceSettings neo
     {
         builder
             .ConfigureServices(services => {
-                services.AddSingleton<ITrackNodeDataSource>(new TrackNodeNeo4JDataSource(Options.Create(neo4JSettings)));
+                services.AddSingleton<ITrackNodeDataSource>(new TrackNodeNeo4JDataSource(
+                    new NullLogger<TrackNodeNeo4JDataSource>(),
+                    Options.Create(neo4JSettings)));
         });
 
         base.ConfigureWebHost(builder);
