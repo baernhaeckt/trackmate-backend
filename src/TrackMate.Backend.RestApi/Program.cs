@@ -1,5 +1,6 @@
 using Trackmate.Backend;
 using Trackmate.Backend.Embeddings;
+using Trackmate.Backend.Instructions;
 using Trackmate.Backend.TrackNodes;
 using Trackmate.Backend.Tracks;
 using TrackMate.Backend.Neo4J;
@@ -16,8 +17,10 @@ namespace TrackMate.Backend.RestApi
             builder.Services
                 .WithNeo4J(builder.Configuration)
                 .Configure<PictureEmbeddingClientSettings>(builder.Configuration.GetRequiredSection(nameof(PictureEmbeddingClientSettings)))
+                .Configure<InstructionsClientSettings>(builder.Configuration.GetRequiredSection(nameof(InstructionsClientSettings)))
                 .AddSingleton<Func<HttpClientHandler, HttpClient>>(handler => new HttpClient(handler))
                 .AddSingleton<PictureEmbeddingClient>()
+                .AddSingleton<InstructionsClient>()
                 .AddSingleton<ITrackDataSource, InMemoryTrackDataSource>()
                 .AddSingleton<TrackNodeService>()
                 .AddSingleton<TrackNodeHub>();

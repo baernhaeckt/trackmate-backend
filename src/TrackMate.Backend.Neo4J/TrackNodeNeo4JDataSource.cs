@@ -10,12 +10,6 @@ public class TrackNodeNeo4JDataSource(IOptions<TrackNodeNeo4JDataSourceSettings>
 {
     private const string TrackNodeLabel = "TrackNode";
 
-    private IDriver CreateDriver()
-        => CreateDriver(settings.Value);
-
-    private static IDriver CreateDriver(TrackNodeNeo4JDataSourceSettings settings)
-        => GraphDatabase.Driver(settings.HostUri, AuthTokens.Basic(settings.Username, settings.Password));
-
     public async Task<TrackNodeModel> CreateTrackNodeAsync(CreateTrackNodeModel model, CancellationToken cancellationToken)
     {
         Guid trackNodeId = Guid.NewGuid();
@@ -32,34 +26,17 @@ public class TrackNodeNeo4JDataSource(IOptions<TrackNodeNeo4JDataSourceSettings>
             new
             {
                 Id = trackNodeId.ToString("N"),
-                Location = new double[] { model.Location.Longitude, model.Location.Latitude, model.Location.Height },
+                Location = new double[] { model.Location.Latitude, model.Location.Longitude, model.Location.Altitude },
                 Vector = new double[] { model.Vector.X, model.Vector.Y, model.Vector.Z },
                 Orientation = new double[] { model.Orientation.Alpha, model.Orientation.Beta }
             });
 
         if (model.previousTrackNodeId.HasValue)
         {
-            await CreateEdge(model.previousTrackNodeId.Value, trackNodeId, cancellationToken: cancellationToken);
+            await CreateEdgeAsync(model.previousTrackNodeId.Value, trackNodeId, cancellationToken: cancellationToken);
         }
 
         return new TrackNodeModel(trackNodeId, model.Location, model.Vector, model.Orientation);
-    }
-
-    private async Task CreateEdge(Guid sourceNodeId, Guid targetNodeId, CancellationToken cancellationToken = default)
-    {
-        using IDriver driver = CreateDriver();
-        using IAsyncSession session = driver.AsyncSession();
-
-        string query = @"
-                    MATCH (source:TrackNode { Id: $SourceId })
-                    MATCH (target:TrackNode { Id: $TargetId })
-                    CREATE (source)-[:PATH]->(target)";
-
-        await session.RunAsync(query, new
-        {
-            SourceId = sourceNodeId.ToString("N"),
-            TargetId = targetNodeId.ToString("N")
-        });
     }
 
     public async Task<TrackNodeModel> AppendEmbeddingAsync(Guid trackNodeId, PictureEmbeddingModel embedding, CancellationToken cancellationToken)
@@ -94,11 +71,79 @@ public class TrackNodeNeo4JDataSource(IOptions<TrackNodeNeo4JDataSourceSettings>
         IRecord record = await result.SingleAsync();
         INode node = record["node"].As<INode>();
 
-        return new TrackNodeModel(
-            Guid.Parse(node["Id"].As<string>()),
-            new GeoLocation(node["Location"].As<List<double>>()[1], node["Location"].As<List<double>>()[0], node["Location"].As<List<double>>()[2]),
-            new TransformationVector(node["Vector"].As<List<double>>()[0], node["Vector"].As<List<double>>()[1], node["Vector"].As<List<double>>()[2]),
-            new Orientation(node["Orientation"].As<List<double>>()[0], node["Orientation"].As<List<double>>()[1]));
+        return node.Map();
     }
+
+    public async Task<FoundTrackNodeModel> FindByEmbeddingAndDistance(PictureEmbeddingModel embedding, Guid trackNodeId, CancellationToken cancellationToken)
+    {
+        using IDriver driver = CreateDriver();
+        using IAsyncSession session = driver.AsyncSession();
+
+        string query = @"
+                    WITH Embedding AS search_vector
+                    MATCH path = (startNode:TrackNode)-[:PATH*1..3]->(node:TrackNode)
+                    WHERE startNode.Id = $TrackNodeId
+                    WHERE gds.similarity.euclidean(node.embedding, search_vector) > 0.8 
+                    RETURN node, gds.similarity.euclidean(node.embedding, external_vector) AS similarity, length(path) AS numberOfEdges
+                    ORDER BY similarity DESC";
+
+        IResultCursor result = await session.RunAsync(
+            query,
+            new { TrackNodeId = trackNodeId, embedding.Embedding });
+
+        IRecord record = await result.SingleAsync();
+        INode node = record["node"].As<INode>();
+
+        return new FoundTrackNodeModel(
+            Guid.Parse(node["Id"].As<string>()),
+            Similarity: record["similarity"].As<double>(),
+            Distance: 0.0);
+    }
+
+    public async Task<TrackNodePath> FindPathAsync(Guid sourceNodeId, Guid targetNodeId, CancellationToken cancellationToken)
+    {
+        using IDriver driver = CreateDriver();
+        using IAsyncSession session = driver.AsyncSession();
+
+        string query = @"
+                    MATCH path = (source:TrackNode { Id: $SourceId })-[:PATH*]->(target:TrackNode { Id: $TargetId })
+                    RETURN nodes(path) as nodes";
+
+        IResultCursor result = await session.RunAsync(
+            query,
+            new
+            {
+                SourceId = sourceNodeId.ToString("N"),
+                TargetId = targetNodeId.ToString("N")
+            });
+
+        IRecord record = await result.SingleAsync();
+        List<INode> nodes = record["nodes"].As<List<INode>>();
+
+        return new TrackNodePath(nodes.Select(node => node.Map()).ToList());
+    }
+
+    public async Task CreateEdgeAsync(Guid sourceNodeId, Guid targetNodeId, CancellationToken cancellationToken = default)
+    {
+        using IDriver driver = CreateDriver();
+        using IAsyncSession session = driver.AsyncSession();
+
+        string query = @"
+                    MATCH (source:TrackNode { Id: $SourceId })
+                    MATCH (target:TrackNode { Id: $TargetId })
+                    CREATE (source)-[:PATH]->(target)";
+
+        await session.RunAsync(query, new
+        {
+            SourceId = sourceNodeId.ToString("N"),
+            TargetId = targetNodeId.ToString("N")
+        });
+    }
+
+    private IDriver CreateDriver()
+        => CreateDriver(settings.Value);
+
+    private static IDriver CreateDriver(TrackNodeNeo4JDataSourceSettings settings)
+        => GraphDatabase.Driver(settings.Uri, AuthTokens.Basic(settings.Username, settings.Password));
 }
 

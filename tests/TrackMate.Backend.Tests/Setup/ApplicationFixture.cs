@@ -19,7 +19,7 @@ public sealed class ApplicationFixture
         {
             return new TrackNodeNeo4JDataSourceSettings
             {
-                HostUri = $"bolt://localhost:{Neo4JBoltPort}",
+                Uri = $"bolt://localhost:{Neo4JBoltPort}",
                 Username = "neo4j",
                 Password = "neo4j"
             };

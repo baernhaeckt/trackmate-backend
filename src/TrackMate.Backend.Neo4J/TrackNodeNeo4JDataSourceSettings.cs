@@ -2,7 +2,7 @@
 
 public class TrackNodeNeo4JDataSourceSettings
 {
-    public string HostUri { get; set; }
+    public string Uri { get; set; }
 
     public string Username { get; set; }
 

@@ -1,3 +1,3 @@
 ﻿namespace Trackmate.Backend.Models;
 
-public record GeoLocation(double Latitude, double Longitude, double Height);
+public record GeoLocation(double Latitude, double Longitude, double Altitude);
