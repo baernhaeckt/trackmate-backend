@@ -109,6 +109,12 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
 
     public async Task UploadTrackPositionPicture(UploadTrackPositionPicture uploadTrackPositionPicture)
     {
+        if (string.IsNullOrEmpty(uploadTrackPositionPicture.TrackId))
+        {
+            logger.LogWarning("API VALIDATION");
+            return;
+        }
+
         logger.LogInformation("Uploaded picture for track position {trackId}.", uploadTrackPositionPicture.TrackId);
 
         Task announce(FoundTrackNodeModel? foundModel) => SendToTrackAsync(uploadTrackPositionPicture.TrackId, "TrackPositionPictureMatched", foundModel);
