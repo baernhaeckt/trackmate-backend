@@ -10,7 +10,7 @@ namespace TrackMate.Backend.RestApi.Hubs;
 
 public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNodeService, TrackService trackService) : Hub
 {
-    private static readonly ConcurrentDictionary<string, List<ISingleClientProxy>> _trackSubscribers = new();
+    private static readonly ConcurrentDictionary<string, List<string>> _trackSubscribers = new();
 
     /// <summary>
     ///     Creates a new <see cref="TrackNodeModel"/> to be used to create tracks.
@@ -46,10 +46,10 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
 
         _trackSubscribers.AddOrUpdate(
             track.TrackId, 
-            [ Clients.Caller ],
+            [ Context.ConnectionId ],
             (_, list) => 
             {
-                list.Add(Clients.Caller);
+                list.Add(Context.ConnectionId);
                 return list;
             });
 
@@ -81,7 +81,7 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     public async Task JoinTrack(string trackId)
     {
         logger.LogInformation("User joined track {trackId}.", trackId);
-        _trackSubscribers[trackId].Add(Clients.Caller);
+        _trackSubscribers[trackId].Add(Context.ConnectionId);
         await SendToTrackAsync(trackId, "UserJoined");
     }
 
@@ -92,7 +92,7 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     public async Task LeaveTrack(string trackId)
 	{
 		logger.LogInformation("User left track {trackId}.", trackId);
-		_trackSubscribers[trackId].Remove(Clients.Caller);
+		_trackSubscribers[trackId].Remove(Context.ConnectionId);
 		await SendToTrackAsync(trackId, "UserLeft");
 	}
 
@@ -134,6 +134,12 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
         return memoryStream.ToArray();
     }
 
-    private static Task SendToTrackAsync(string trackId, string methodName, object? arg1 = null)
-        => Task.WhenAll(_trackSubscribers[trackId].Select(client => client.SendAsync(methodName, arg1)));
+    private async Task SendToTrackAsync(string trackId, string methodName, object? arg1 = null)
+    {
+	    if (_trackSubscribers.TryGetValue(trackId, out var subscribers))
+	    {
+		    var tasks = subscribers.Select(connectionId => Clients.Client(connectionId).SendAsync(methodName, arg1));
+		    await Task.WhenAll(tasks);
+	    }
+    }
 }
