@@ -108,6 +108,9 @@ public class TrackService(
     /// </summary>
     private bool IsInstructionNecessary(TrackModel track, TrackNodeModel nextTrackNodeModel)
     {
+        // disable for DEMO
+        return false;
+
         Vector3 currentVector = track.CurrentVector;
         Vector3 nextVector = nextTrackNodeModel.Location.AsCoordinates();
         double dotProduct = currentVector.X * nextVector.X + currentVector.Y * nextVector.Y + currentVector.Z * nextVector.Z;

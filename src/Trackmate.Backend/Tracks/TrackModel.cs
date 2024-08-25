@@ -9,9 +9,9 @@ public class TrackModel()
 
     public required TrackNodeModel GoalNode { get; set; }
 
-    public DateTimeOffset LastPictureUploadDateTime { get; set; }
+    public DateTimeOffset LastPictureUploadDateTime { get; set; } = DateTimeOffset.MinValue;
 
-    public DateTimeOffset LastHintDateTime { get; set; }
+    public DateTimeOffset LastHintDateTime { get; set; } = DateTimeOffset.MinValue;
 
     public Vector3 CurrentVector
     {
