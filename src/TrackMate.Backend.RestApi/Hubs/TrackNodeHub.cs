@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Trackmate.Backend;
 using Trackmate.Backend.Models;
@@ -138,9 +139,22 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     {
 	    if (_trackSubscribers.TryGetValue(trackId, out var subscribers))
 	    {
+            // First send it to the caller
+            await Clients.Caller.SendAsync(methodName, arg1);
+
+            // Then send it to all other subscribers
             foreach (var connectionId in subscribers)
 			{
-				await Clients.Client(connectionId).SendAsync(methodName, arg1);
+                if (connectionId == Context.ConnectionId)
+				{
+					continue;
+				}
+
+                var client = Clients.Client(connectionId);
+                if (client is not null)
+                {
+                    await client.SendAsync(methodName, arg1);
+                }
 			}
 	    }
     }
