@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Diagnostics;
 using System.Numerics;
 using Trackmate.Backend.Embeddings;
 using Trackmate.Backend.Instructions;
@@ -40,11 +41,19 @@ public class TrackService(
         AnnouncePictureDetectionResult announcePictureDetectionResult,
         CancellationToken cancellationToken = default)
     {
+        Stopwatch stopwatch = Stopwatch.StartNew();
+
         TrackModel track = await trackDataSource.GetTrackAsync(uploadTrackPositionPicture.TrackId, cancellationToken);
         track.LastPictureUploadDateTime = DateTimeOffset.Now;
+        logger.LogInformation("Loaded track ({elapsedMiliseconds}ms)", stopwatch.ElapsedMilliseconds);
 
+        stopwatch.Restart();
         PictureEmbeddingModel model = await pictureEmbeddingClient.GeneratePictureEmbeddingAsync(uploadTrackPositionPicture.MimeType, uploadTrackPositionPicture.PictureBase64);
+        logger.LogInformation("Generated picture embedding ({elapsedMiliseconds}ms)", stopwatch.ElapsedMilliseconds);
+
+        stopwatch.Restart();
         FoundTrackNodeModel foundTrackNodeModel = await trackNodeDataSource.FindByEmbeddingAndDistance(model, track.LastVisitedNode.TrackNode.Id, CancellationToken.None);
+        logger.LogInformation("Find track node ({elapsedMiliseconds}ms)", stopwatch.ElapsedMilliseconds);
 
         if (foundTrackNodeModel == FoundTrackNodeModel.None)
         {
@@ -54,9 +63,11 @@ public class TrackService(
         }
         await announcePictureDetectionResult(foundTrackNodeModel);
 
+        stopwatch.Restart();
         TrackNodeModel currentTrackNode = await trackNodeDataSource.GetTrackNodeAsync(track.LastVisitedNode.TrackNode.Id, CancellationToken.None);
         TrackNodePath path = await trackNodeDataSource.FindPathAsync(foundTrackNodeModel.TrackNodeId, track.GoalNode.Id, CancellationToken.None);
         TrackNodeModel nextTrackNodeModel = await FindNextRelevantTrackNodeModel(path);
+        logger.LogInformation("Path found ({elapsedMiliseconds}ms)", stopwatch.ElapsedMilliseconds);
 
         if (IsInstructionNecessary(track, nextTrackNodeModel)
             || track.LastHintDateTime + trackServiceSettings.Value.InstructionTimeout < DateTimeOffset.Now)
@@ -65,12 +76,14 @@ public class TrackService(
             track.VisitedNodes.Add(new VisitedTrackNodeModel(currentTrackNode, DateTimeOffset.Now));
             track.LastHintDateTime = DateTimeOffset.Now;
 
+            stopwatch.Restart();
             InstructionRequestModel instructionRequestModel = new(
                 track.LastVisitedNode.TrackNode.Location,
                 nextTrackNodeModel.Location);
 
             string instructionText = await instructionsClient.CreateInstructionTextAsync(instructionRequestModel);
             Stream audioStream = await instructionsClient.CreateInstructionAudioAsync(instructionRequestModel);
+            logger.LogInformation("Instruction generated ({elapsedMiliseconds}ms)", stopwatch.ElapsedMilliseconds);
 
             return TrackUpdateResult.NewInstruction(instructionText, audioStream);
         }
