@@ -1,7 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
-using System.Runtime.CompilerServices;
-using System.Text;
 using Trackmate.Backend;
 using Trackmate.Backend.Models;
 using Trackmate.Backend.TrackNodes;
@@ -9,7 +7,7 @@ using Trackmate.Backend.Tracks;
 
 namespace TrackMate.Backend.RestApi.Hubs;
 
-public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNodeService, TrackService trackService) : Hub
+public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNodeService, TrackService trackService, IServiceScopeFactory serviceScopeFactory) : Hub
 {
     private static readonly ConcurrentDictionary<string, List<string>> _trackSubscribers = new();
 
@@ -83,7 +81,7 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     {
         logger.LogInformation("User joined track {trackId}.", trackId);
         _trackSubscribers[trackId].Add(Context.ConnectionId);
-        await SendToTrackAsync(trackId, "UserJoined");
+        await SendToTrackAsync(Context.ConnectionId, trackId, "UserJoined");
     }
 
     /// <summary>
@@ -94,7 +92,7 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
 	{
 		logger.LogInformation("User left track {trackId}.", trackId);
 		_trackSubscribers[trackId].Remove(Context.ConnectionId);
-		await SendToTrackAsync(trackId, "UserLeft");
+		await SendToTrackAsync(Context.ConnectionId, trackId, "UserLeft");
 	}
 
     /// <summary>
@@ -104,7 +102,7 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     public async Task CompleteTrack(string trackId)
     {
         logger.LogInformation("Track {trackId} completed.", trackId);
-        await SendToTrackAsync(trackId, "TrackCompleted");
+        await SendToTrackAsync(Context.ConnectionId, trackId, "TrackCompleted");
         _trackSubscribers.TryRemove(trackId, out _);
     }
 
@@ -118,14 +116,20 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
 
         logger.LogInformation("Uploaded picture for track position {trackId}.", uploadTrackPositionPicture.TrackId);
 
-        Task announce(FoundTrackNodeModel? foundModel) => SendToTrackAsync(uploadTrackPositionPicture.TrackId, "TrackPositionPictureMatched", foundModel);
-        TrackUpdateResult result = await trackService.UpdateTrackAsync(uploadTrackPositionPicture, announce, default);
+        Task announce(FoundTrackNodeModel? foundModel) => SendToTrackAsync(Context.ConnectionId, uploadTrackPositionPicture.TrackId, "TrackPositionPictureMatched", foundModel);
 
-        if (result.type == TrackUpdateResultType.NewInstruction)
+        Task.Run(async () =>
         {
-            // await Clients.Caller.SendAsync("InstructionAudio", Convert.ToBase64String(ReadAllBytesFromStream(result.instructionAudio!)));
-            await SendToTrackAsync(uploadTrackPositionPicture.TrackId, "InstructionText", result.instruction);
-        }
+            using var scope = serviceScopeFactory.CreateScope();
+	        var scopedTrackService = scope.ServiceProvider.GetRequiredService<TrackService>();
+
+	        TrackUpdateResult result = await scopedTrackService.UpdateTrackAsync(uploadTrackPositionPicture, announce, default);
+	        if (result.type == TrackUpdateResultType.NewInstruction)
+	        {
+		        // await Clients.Caller.SendAsync("InstructionAudio", Convert.ToBase64String(ReadAllBytesFromStream(result.instructionAudio!)));
+		        await SendToTrackAsync(null, uploadTrackPositionPicture.TrackId, "InstructionText", result.instruction);
+	        }
+        });
     }
 
     private static byte[] ReadAllBytesFromStream(Stream stream)
@@ -135,26 +139,33 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
         return memoryStream.ToArray();
     }
 
-    private async Task SendToTrackAsync(string trackId, string methodName, object? arg1 = null)
+    private async Task SendToTrackAsync(string? ownConnectionId, string trackId, string methodName, object? arg1 = null)
     {
 	    if (_trackSubscribers.TryGetValue(trackId, out var subscribers))
 	    {
-            // First send it to the caller
-            await Clients.Caller.SendAsync(methodName, arg1);
+		    if (!string.IsNullOrWhiteSpace(ownConnectionId))
+		    {
+			    // First send it to the caller
+			    await Clients.Caller.SendAsync(methodName, arg1);
+		    }
 
-            // Then send it to all other subscribers
+		    // Then send it to all other subscribers
             foreach (var connectionId in subscribers)
 			{
-                if (connectionId == Context.ConnectionId)
+                if (connectionId == ownConnectionId)
 				{
 					continue;
 				}
 
-                var client = Clients.Client(connectionId);
-                if (client is not null)
-                {
-                    await client.SendAsync(methodName, arg1);
-                }
+				try
+				{
+					var client = Clients.Client(connectionId);
+					await client.SendAsync(methodName, arg1);
+				}
+				catch (Exception ex)
+				{
+					logger.LogError(ex, "Error sending message to client {connectionId}.", connectionId);
+				}
 			}
 	    }
     }
