@@ -138,8 +138,10 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     {
 	    if (_trackSubscribers.TryGetValue(trackId, out var subscribers))
 	    {
-		    var tasks = subscribers.Select(connectionId => Clients.Client(connectionId).SendAsync(methodName, arg1));
-		    await Task.WhenAll(tasks);
+            foreach (var connectionId in subscribers)
+			{
+				await Clients.Client(connectionId).SendAsync(methodName, arg1);
+			}
 	    }
     }
 }
