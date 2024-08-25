@@ -82,10 +82,11 @@ public class TrackService(
                 nextTrackNodeModel.Location);
 
             string instructionText = await instructionsClient.CreateInstructionTextAsync(instructionRequestModel);
-            Stream audioStream = await instructionsClient.CreateInstructionAudioAsync(instructionRequestModel);
+            // disabled for debugging
+            // Stream audioStream = await instructionsClient.CreateInstructionAudioAsync(instructionRequestModel);
             logger.LogInformation("Instruction generated ({elapsedMiliseconds}ms)", stopwatch.ElapsedMilliseconds);
 
-            return TrackUpdateResult.NewInstruction(instructionText, audioStream);
+            return TrackUpdateResult.NewInstruction(instructionText, null);
         }
 
         track.VisitedNodes.Add(new VisitedTrackNodeModel(currentTrackNode, DateTimeOffset.Now));

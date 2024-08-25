@@ -8,6 +8,6 @@ public record TrackUpdateResult(TrackUpdateResultType type, string? instruction 
     public static TrackUpdateResult LocationUpdated
         => new TrackUpdateResult(TrackUpdateResultType.LocationUpdated);
 
-    public static TrackUpdateResult NewInstruction(string instruction, Stream instructionAudio)
+    public static TrackUpdateResult NewInstruction(string instruction, Stream? instructionAudio)
         => new TrackUpdateResult(TrackUpdateResultType.NewInstruction, instruction, instructionAudio);
 }

@@ -122,7 +122,7 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
 
         if (result.type == TrackUpdateResultType.NewInstruction)
         {
-            await Clients.Caller.SendAsync("InstructionAudio", Convert.ToBase64String(ReadAllBytesFromStream(result.instructionAudio!)));
+            // await Clients.Caller.SendAsync("InstructionAudio", Convert.ToBase64String(ReadAllBytesFromStream(result.instructionAudio!)));
             await SendToTrackAsync(uploadTrackPositionPicture.TrackId, "InstructionText", result.instruction);
         }
     }
