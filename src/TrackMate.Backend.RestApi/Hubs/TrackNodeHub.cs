@@ -57,6 +57,24 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
     }
 
     /// <summary>
+    ///    Gets all running tracks.
+    /// </summary>
+    public async Task<string[]> GetRunningTracks()
+    {
+        logger.LogInformation("Getting running tracks.");
+        return _trackSubscribers.Keys.ToArray();
+    }
+
+    /// <summary>
+    ///   Gets all track nodes.
+    /// </summary>
+    public async Task<TrackNodeModel[]> GetAllTrackNodes()
+    {
+        logger.LogInformation("Getting all track nodes.");
+	    return await trackNodeService.GetAllTrackNodesAsync(default);
+    }
+
+    /// <summary>
     ///     Joins a ongoing track, subscribing to the updates of the track progress.
     /// </summary>
     /// <param name="trackId">Id of the track to join.</param>
@@ -66,6 +84,17 @@ public class TrackNodeHub(ILogger<TrackNodeHub> logger, TrackNodeService trackNo
         _trackSubscribers[trackId].Add(Clients.Caller);
         await SendToTrackAsync(trackId, "UserJoined");
     }
+
+    /// <summary>
+    ///    Leaves a track, unsubscribing from the updates of the track progress.
+    /// </summary>
+    /// <param name="trackId">The track to leave.</param>
+    public async Task LeaveTrack(string trackId)
+	{
+		logger.LogInformation("User left track {trackId}.", trackId);
+		_trackSubscribers[trackId].Remove(Clients.Caller);
+		await SendToTrackAsync(trackId, "UserLeft");
+	}
 
     /// <summary>
     ///     Completes a track, notifying all subscribers that the track is completed.

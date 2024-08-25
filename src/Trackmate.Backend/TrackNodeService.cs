@@ -23,4 +23,10 @@ public class TrackNodeService(
         PictureEmbeddingModel embedding = await embeddingClient.GeneratePictureEmbeddingAsync(uploadPictureModel.MimeType, uploadPictureModel.ImageDataBase64);
         return await trackNodeDataSource.AppendEmbeddingAsync(uploadPictureModel.TrackNodeId, embedding, cancellationToken);
     }
+
+    public async Task<TrackNodeModel[]> GetAllTrackNodesAsync(CancellationToken cancellationToken)
+    {
+        logger.LogInformation("Getting all track nodes.");
+	    return await trackNodeDataSource.GetAllTrackNodesAsync(cancellationToken);
+    }
 }

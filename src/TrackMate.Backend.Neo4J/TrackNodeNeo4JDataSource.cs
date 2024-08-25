@@ -141,6 +141,28 @@ public class TrackNodeNeo4JDataSource(
         return new TrackNodePath(nodes.Select(node => node.Map()).ToList());
     }
 
+    /// <inheritdoc />
+    public async Task<TrackNodeModel[]> GetAllTrackNodesAsync(CancellationToken cancellationToken)
+    {
+        using IDriver driver = CreateDriver();
+	    using IAsyncSession session = driver.AsyncSession();
+        
+		string query = @"
+					MATCH (node:TrackNode)
+					RETURN node";
+
+		IResultCursor result = await session.RunAsync(query);
+
+		List<TrackNodeModel> nodes = new();
+		await result.ForEachAsync(record =>
+		{
+			INode node = record["node"].As<INode>();
+			nodes.Add(node.Map());
+		});
+
+		return nodes.ToArray();
+    }
+
     public async Task CreateEdgeAsync(Guid sourceNodeId, Guid targetNodeId, CancellationToken cancellationToken = default)
     {
         using IDriver driver = CreateDriver();

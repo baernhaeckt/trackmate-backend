@@ -14,4 +14,5 @@ public interface ITrackNodeDataSource
     public Task<FoundTrackNodeModel> FindByEmbeddingAndDistance(PictureEmbeddingModel embedding, Guid trackNodeId, CancellationToken cancellationToken);
 
     public Task<TrackNodePath> FindPathAsync(Guid sourceNodeId, Guid targetNodeId, CancellationToken cancellationToken);
+    public Task<TrackNodeModel[]> GetAllTrackNodesAsync(CancellationToken cancellationToken);
 }
